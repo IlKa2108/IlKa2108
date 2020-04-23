@@ -1,0 +1,15 @@
+import logging
+import time
+
+logfile = time.strftime(r'C:\PythonProjects\Bla-bla-bla\%Y-%m-%d--%H-%M_Probe_Fill_In_Form_2.log', time.localtime())
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+handler = logging.FileHandler(logfile)
+handler.setLevel(logging.INFO)
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s') # create a logging format
+handler.setFormatter(formatter)
+logger.addHandler(handler)# add the file handler to the logger
+
+# Record in logfile
+logger.info('Doing something.')
