@@ -1,0 +1,110 @@
+import pandas as pd
+import numpy as np
+
+# Списки данных для Исходящей общей документации:
+type_of_document = ["Отчетная ведомость",
+                    "Информационное письмо",
+                    "Договор",
+                    "Конверт без вскрытия",
+                    "Отчет",
+                    "Табуляграмма",
+                    "Почтовое уведомление",
+                    "Телеграмма"]  # Заполнять в En-раскладке
+type_of_delivery = ["Фельдсвязь",
+                    "Нарочный",
+                    "Почтовая служба",
+                    "Собственная служба",
+                    "Инкассация",
+                    "Спецсвязь",
+                    "Почта специальная",
+                    "Телеграф"]  # Заполнять в En-раскладке
+title_of_document = ["ДСП",
+                     "Общий доступ"]  # Заполнять в En-раскладке
+content_of_document = ["1+2",
+                       "1+3"]
+sign_person = ["Иванов И.И.",
+               "Петров П.П.",
+               "Сидорова С.С.",
+               "Никонова Е.В."]  # Заполнять в En-раскладке
+bic = ['041280103',
+       '044525586',
+       '044525597',
+       '044525603',
+       '044525652',
+       '278000742',
+       '046577993'] # Список пробный, ниже - полный
+# Если нужно вводить дату, надо подумать:
+# date_of_document = ['2018-12-07', '2019-10-01', '2019-09-26', '2018-10-09', '2018-10-08']
+# ----------------------------------------------------------------------
+# Список Справочник БИК (len = 2550):
+bic_original = pd.read_excel(r'C:\Users\I\PycharmProjects\AKORD_testcase\bic_01.xlsx',
+                              sheet_name='Sheet1',
+                              dtype={'BIC': str})
+df_bic = bic_original['BIC']
+df_bic = df_bic.dropna()
+bic_list = df_bic.to_list()
+bic_list[0:7]
+
+# Creating DataFrame from lists above:
+df_a= pd.DataFrame(index=range(0, num_rows),
+                   columns=['Тип документа',
+                            'Вид доставки',
+                            'Гриф',
+                            'Состав',
+                            'ФИО',
+                            'БИК'])
+df_a['Тип документа'] = np.random.choice(list(type_of_document), len(df_a))
+df_a['Вид доставки'] = np.random.choice(list(type_of_delivery), len(df_a))
+df_a['Гриф'] = np.random.choice(list(title_of_document), len(df_a))
+df_a['Состав'] = np.random.choice(list(content_of_document), len(df_a))
+df_a['ФИО'] = np.random.choice(list(sign_person), len(df_a))
+df_a['БИК'] = np.random.choice(list(bic_list), len(df_a))
+df_a.head(6)
+# ----------------------------------------------------------------------
+df_a.dtypes
+# ----------------------------------------------------------------------
+# Создание ДФ для заполнения формы Исходящая документация:
+## Создание ДФ со всем возможными сочетаниями Типа документа, Грифа, Вида доставки:
+t_doc = []
+title_doc = []
+t_del = []
+
+for t in range(0, len(type_of_delivery)):
+    for n in range(0, len(type_of_document)):
+        for d in range(0, len(title_of_document)):
+            t_doc.append(type_of_document[n])
+            title_doc.append(title_of_document[d])
+            t_del.append(type_of_delivery[t])
+
+df_b = pd.DataFrame({'Тип документа': t_doc,
+                     'Гриф': title_doc,
+                     'Вид доставки': t_del})
+
+## Добавление колонок БИК, ФИО в случайном порядке:
+df_b['БИК'] = np.random.choice(list(bic_list), len(df_b))
+df_b['ФИО'] = np.random.choice(list(sign_person), len(df_b))
+
+## Создание ДФ ромеров документа по возрастанию и в соответствии с шаблоном:
+numbers = []
+shablon = '13П-01/'
+for n in range(1, len(df_b)+1):
+    numbers.append(shablon + str(n))
+
+df0 = pd.DataFrame({'Number':numbers})
+df_b['Номер докумета'] = df0
+
+## Добавление колонки Состав документа с постоянным значением:
+df_b['Состав'] = content_of_document[0]
+
+df_b  # ДФ для заполнения формы Исходящая документация
+
+# print(len(df_b))
+# ----------------------------------------------------------------------
+# Цикл для заполнения формы Исходящая документация
+for n in range(0, len(df_b)-124):  # уменьшено количество строк
+    print(df_b.loc[n]['Номер докумета'])
+    print(df_b.loc[n]['Тип документа'])
+    print(df_b.loc[n]['Гриф'])
+    print(df_b.loc[n]['Вид доставки'])
+    print(df_a.loc[n]['БИК'])
+    print('--------------')
