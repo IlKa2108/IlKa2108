@@ -1,0 +1,81 @@
+import pandas as pd
+from pandas import ExcelWriter
+import numpy as np
+
+
+# Import xlsx-file in DF, type of all the data is String:
+xlsx_file = r'C:\PythonProjects\Jira\ФГ_ОТПА_06.04-07.05_02.xlsx'
+tt_original = pd.read_excel(xlsx_file, sheet_name='2. Отчёты работников', dtype=str, skiprows=[0])
+print('Размер загруженной таблицы ', tt_original.shape)
+
+# Delete specific columns:
+tt_original.drop(tt_original.columns[[0, 1, 2, 4, 5, 6]], axis=1, inplace=True)
+print('Очищение таблицы: удаление лишних столбцов ', tt_original.shape)
+
+# Delete empty columns:
+tt_original.dropna(how='all', axis=1, inplace=True)
+print('Очищение таблицы: удаление пустых столбцов ',tt_original.shape)
+
+# Delete columns "Сделано за неделю...":
+tt_original = tt_original.loc[:, ~tt_original.columns.str.contains('Сделано', na=False)]
+print('Очищение таблицы: удаление столбцов "Сделано за неделю" ',tt_original.shape)
+
+# Delete empty rows (with no Employee):
+tt_original['ФИО Исполнителя'].replace('', np.nan, inplace=True)
+tt_original.dropna(subset=['ФИО Исполнителя'], inplace=True)
+print('Очищение таблицы: удаление лишних строк ', tt_original.shape)
+
+# Create copy of original DF:
+df_work = tt_original.copy()
+print('Создание копии очищенной таблицы') 
+
+# Create DF of performers:
+performers = pd.read_excel(xlsx_file, sheet_name='Технологический', dtype=str)
+df_performers = pd.DataFrame(performers, columns=['ФИО', 'ID'])
+df_performers.dropna(subset=['ФИО'], inplace=True)
+print('Очищение таблицы: удаление лишних строк ', df_performers.shape)
+# df_performers
+# len(df_performers)
+
+# Create list of work types:
+list_type = ['Тестирование', 'Удаленная работа']
+    
+# Create pivot table:
+df_pivot = pd.melt(df_work, id_vars=['ФИО Исполнителя', 'Детализация задачи или операции (формулировко задания \ поручения) (опционально)'], var_name='Дата')
+df_pivot = df_pivot.rename(columns={'value': 'Списано'})
+# df_pivot
+
+# Delete rows with empty values of column 'Часы':
+df_pivot.dropna(subset=['Списано'], inplace=True)
+df_pivot = df_pivot[df_pivot['Списано'] != '']
+
+# Create loop for every performer:
+for i in range(0, df_performers.shape[0]):
+    # Create DF for specific user:
+    df_user = df_pivot.loc[df_pivot['ФИО Исполнителя'] == df_performers.iloc[i]['ФИО']]
+    
+    # Merge DF for specific user with DF of performers:
+    df_user_full = pd.merge(left=df_user, right=df_performers, left_on='ФИО Исполнителя', right_on='ФИО')
+
+    # Delete spare column "ФИО":
+    df_user_full.drop("ФИО", axis=1, inplace=True)
+
+    # Add column "Вид работы" with condition:
+    df_user_full['Вид работ'] = np.where(df_user_full['Детализация задачи или операции (формулировко задания \ поручения) (опционально)'].str.contains('Тестирование'),'Тестирование', 'Удаленная работа')
+    
+    # Create xlsx-file with user's data:
+    filename = str(r'C:\PythonProjects\Jira\ФГ_ОТПА_06.04-07.05_') + df_performers.iloc[i]['ID'] + '.xlsx'
+    writer = ExcelWriter(filename)
+    df_user_full.to_excel(writer, df_performers.iloc[i]['ID'], index=False)
+    writer.save()
+    writer.close()
+    print('Создан xlsx-файл c данными выбранного пользователя: ', df_performers.iloc[i]['ФИО'])
+    # Check out:
+    # print(df_user_full.iloc[: , 1:6])
+
+# Create resulting xlsx-file:
+writer = ExcelWriter(r'C:\PythonProjects\Jira\ФГ_ОТПА_06.04-07.05_resulting.xlsx')
+tt_original.to_excel(writer,'General',index=False)
+writer.save()
+writer.close()
+print('Создан результирующий xlsx-файл')
